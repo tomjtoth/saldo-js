@@ -6,13 +6,15 @@ import { db, getDbPath } from "./instance";
 import { schema } from "./relations";
 import { DbRevision, DbUser, DrizzleTx } from "./types";
 
-const DB_BACKUP_EVERY_N_REVISIONS = 50;
+const DB_BACKUP_EVERY_N_REVISIONS = parseInt(
+  process.env.DB_BACKUP_EVERY_N_REVISIONS ?? "0",
+);
 
 type Operation<T> = (tx: DrizzleTx, revisionId: DbRevision["id"]) => Promise<T>;
 
 export async function atomic<T>(
   revisedById: DbUser["id"],
-  operation: Operation<T>
+  operation: Operation<T>,
 ): Promise<T> {
   let revisionId = -1;
 
@@ -34,6 +36,7 @@ export async function atomic<T>(
 
   if (
     !process.env.AUTH_URL?.startsWith("https://staging") &&
+    DB_BACKUP_EVERY_N_REVISIONS > 0 &&
     revisionId % DB_BACKUP_EVERY_N_REVISIONS === 0
   ) {
     const dbPath = getDbPath();
